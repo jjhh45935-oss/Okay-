@@ -52,7 +52,7 @@ android {
         minSdk 24
         targetSdk 35
         versionCode 1
-        versionName "1.0"
+        versionName "1.1"
     }
 
     buildTypes {
@@ -72,12 +72,16 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'com.unity3d.ads:unity-ads:4.18.1'
 }
 EOF
 
 cat << 'EOF' > app/src/main/AndroidManifest.xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -180,7 +184,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
     android:background="@color/bg_light"
     android:orientation="vertical">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -234,7 +237,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- Party Details Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -300,20 +302,18 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Divider Line -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:layout_marginVertical="14dp"
                 android:background="@color/primary" />
 
-            <!-- Items Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
@@ -339,7 +339,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
-            <!-- Totals & GST Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -414,7 +413,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Quick GST Chips -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -499,7 +497,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Action Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -543,6 +540,13 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
 
         </LinearLayout>
     </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/bannerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white" />
+
 </LinearLayout>
 EOF
 
@@ -707,6 +711,12 @@ cat << 'EOF' > app/src/main/res/layout/activity_saved_bills.xml
         android:layout_weight="1"
         android:padding="12dp" />
 
+    <FrameLayout
+        android:id="@+id/bannerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white" />
+
 </LinearLayout>
 EOF
 
@@ -790,6 +800,130 @@ cat << 'EOF' > app/src/main/res/layout/item_saved_bill.xml
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
+EOF
+
+cat << 'EOF' > app/src/main/java/com/sales/bill/AdsHelper.java
+package com.sales.bill;
+
+import android.app.Activity;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+
+import com.unity3d.ads.IUnityAdsInitializationListener;
+import com.unity3d.ads.IUnityAdsLoadListener;
+import com.unity3d.ads.IUnityAdsShowListener;
+import com.unity3d.ads.UnityAds;
+import com.unity3d.ads.UnityAdsShowOptions;
+import com.unity3d.services.banners.BannerErrorInfo;
+import com.unity3d.services.banners.BannerView;
+import com.unity3d.services.banners.UnityBannerSize;
+
+public class AdsHelper {
+
+    public static final String UNITY_GAME_ID = "800447446";
+    public static final String BANNER_AD_UNIT = "BP_Banner_Android";
+    public static final String INTERSTITIAL_AD_UNIT = "BP_Interstitial_Android";
+    public static final String REWARDED_AD_UNIT = "BP_Rewarded_Android";
+    public static final boolean TEST_MODE = true; // Real ads ke liye false karein
+
+    private static boolean initialized = false;
+    private static boolean interstitialLoaded = false;
+
+    public static void init(Activity activity) {
+        if (UnityAds.isInitialized()) {
+            initialized = true;
+            loadInterstitial();
+            return;
+        }
+        UnityAds.initialize(activity.getApplicationContext(), UNITY_GAME_ID, TEST_MODE, new IUnityAdsInitializationListener() {
+            @Override
+            public void onInitializationComplete() {
+                initialized = true;
+                loadInterstitial();
+            }
+
+            @Override
+            public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
+                initialized = false;
+            }
+        });
+    }
+
+    public static void loadInterstitial() {
+        if (!initialized && !UnityAds.isInitialized()) return;
+        UnityAds.load(INTERSTITIAL_AD_UNIT, new IUnityAdsLoadListener() {
+            @Override
+            public void onUnityAdsAdLoaded(String placementId) {
+                interstitialLoaded = true;
+            }
+
+            @Override
+            public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
+                interstitialLoaded = false;
+            }
+        });
+    }
+
+    public static void showInterstitialThen(Activity activity, Runnable afterAd) {
+        if (!interstitialLoaded || !UnityAds.isInitialized()) {
+            loadInterstitial();
+            if (afterAd != null) afterAd.run();
+            return;
+        }
+
+        interstitialLoaded = false;
+        UnityAds.show(activity, INTERSTITIAL_AD_UNIT, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
+            @Override
+            public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
+                loadInterstitial();
+                activity.runOnUiThread(() -> {
+                    if (afterAd != null && !activity.isFinishing() && !activity.isDestroyed()) {
+                        afterAd.run();
+                    }
+                });
+            }
+
+            @Override
+            public void onUnityAdsShowStart(String placementId) {}
+
+            @Override
+            public void onUnityAdsShowClick(String placementId) {}
+
+            @Override
+            public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
+                loadInterstitial();
+                activity.runOnUiThread(() -> {
+                    if (afterAd != null && !activity.isFinishing() && !activity.isDestroyed()) {
+                        afterAd.run();
+                    }
+                });
+            }
+        });
+    }
+
+    public static BannerView attachBanner(Activity activity, FrameLayout container) {
+        if (container == null) return null;
+        BannerView bannerView = new BannerView(activity, BANNER_AD_UNIT, new UnityBannerSize(320, 50));
+        bannerView.setListener(new BannerView.IListener() {
+            @Override public void onBannerLoaded(BannerView bannerAdView) {}
+            @Override public void onBannerShown(BannerView bannerAdView) {}
+            @Override public void onBannerClick(BannerView bannerAdView) {}
+            @Override public void onBannerFailedToLoad(BannerView bannerAdView, BannerErrorInfo errorInfo) {}
+            @Override public void onBannerLeftApplication(BannerView bannerAdView) {}
+        });
+
+        container.removeAllViews();
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        lp.gravity = Gravity.CENTER;
+        container.addView(bannerView, lp);
+        bannerView.load();
+        return bannerView;
+    }
+}
 EOF
 
 cat << 'EOF' > app/src/main/java/com/sales/bill/BillItem.java
@@ -1043,7 +1177,6 @@ public class PdfHelper {
         y += 22;
         canvas.drawLine(40, y, pageWidth - 40, y, linePaint);
 
-        // Party Info
         y += 22;
         canvas.drawText("Bill To (Party):", 40, y, boldPaint);
         y += 16;
@@ -1058,12 +1191,10 @@ public class PdfHelper {
             y += 15;
         }
 
-        // Divider Line
         y += 6;
         canvas.drawLine(40, y, pageWidth - 40, y, linePaint);
         y += 16;
 
-        // Table Header
         canvas.drawRect(40, y - 14, pageWidth - 40, y + 8, headerBg);
         canvas.drawText("S.No", 46, y, boldPaint);
         canvas.drawText("Item Name", 86, y, boldPaint);
@@ -1072,7 +1203,6 @@ public class PdfHelper {
         canvas.drawText("Amount", pageWidth - 46, y, rightBold);
         y += 24;
 
-        // Items
         int idx = 1;
         for (BillItem item : bill.items) {
             if (y > 760) {
@@ -1105,7 +1235,6 @@ public class PdfHelper {
         canvas.drawLine(40, y, pageWidth - 40, y, linePaint);
         y += 22;
 
-        // Totals
         canvas.drawText("Sub Total:", 420, y, rightText);
         canvas.drawText(String.format(Locale.getDefault(), "Rs. %.2f", bill.subTotal), pageWidth - 46, y, rightBold);
         y += 18;
@@ -1214,6 +1343,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -1221,6 +1351,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputEditText;
+import com.unity3d.services.banners.BannerView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -1238,6 +1369,7 @@ public class MainActivity extends AppCompatActivity {
     private BillDbHelper dbHelper;
     private String currentBillNo;
     private String currentDate;
+    private BannerView bannerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -1245,6 +1377,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         dbHelper = new BillDbHelper(this);
+        AdsHelper.init(this);
+        FrameLayout bannerContainer = findViewById(R.id.bannerContainer);
+        bannerView = AdsHelper.attachBanner(this, bannerContainer);
 
         tvBillMeta = findViewById(R.id.tvBillMeta);
         tvSubTotal = findViewById(R.id.tvSubTotal);
@@ -1405,11 +1540,12 @@ public class MainActivity extends AppCompatActivity {
         dbHelper.insertBill(bill);
         Toast.makeText(this, "Bill Saved (" + bill.billNo + ")!", Toast.LENGTH_SHORT).show();
 
-        if (generatePdf) {
-            PdfHelper.createAndShowPdf(this, bill);
-        }
         currentBillNo = dbHelper.getNextBillNo();
         tvBillMeta.setText("Bill No: " + currentBillNo + " | Date: " + currentDate);
+
+        if (generatePdf) {
+            AdsHelper.showInterstitialThen(this, () -> PdfHelper.createAndShowPdf(MainActivity.this, bill));
+        }
     }
 
     private double parseDouble(String s) {
@@ -1419,6 +1555,12 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             return 0.0;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bannerView != null) bannerView.destroy();
     }
 
     private abstract static class SimpleWatcher implements TextWatcher {
@@ -1504,12 +1646,15 @@ package com.sales.bill;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.unity3d.services.banners.BannerView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1520,6 +1665,7 @@ public class SavedBillsActivity extends AppCompatActivity {
     private final List<BillModel> bills = new ArrayList<>();
     private SavedBillAdapter adapter;
     private TextView tvEmpty;
+    private BannerView bannerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -1527,6 +1673,9 @@ public class SavedBillsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_saved_bills);
 
         dbHelper = new BillDbHelper(this);
+        FrameLayout bannerContainer = findViewById(R.id.bannerContainer);
+        bannerView = AdsHelper.attachBanner(this, bannerContainer);
+
         tvEmpty = findViewById(R.id.tvEmpty);
         RecyclerView rv = findViewById(R.id.rvSavedBills);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -1536,7 +1685,8 @@ public class SavedBillsActivity extends AppCompatActivity {
         adapter = new SavedBillAdapter(bills, new SavedBillAdapter.Listener() {
             @Override
             public void onPdf(BillModel bill) {
-                PdfHelper.createAndShowPdf(SavedBillsActivity.this, bill);
+                AdsHelper.showInterstitialThen(SavedBillsActivity.this,
+                        () -> PdfHelper.createAndShowPdf(SavedBillsActivity.this, bill));
             }
 
             @Override
@@ -1556,7 +1706,13 @@ public class SavedBillsActivity extends AppCompatActivity {
         tvEmpty.setVisibility(bills.isEmpty() ? View.VISIBLE : View.GONE);
         adapter.notifyDataSetChanged();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bannerView != null) bannerView.destroy();
+    }
 }
 EOF
 
-echo "Sales Bill App files created!"
+echo "Sales Bill App with Unity Ads Ready!"
