@@ -52,7 +52,7 @@ android {
         minSdk 24
         targetSdk 35
         versionCode 1
-        versionName "1.1"
+        versionName "1.2"
     }
 
     buildTypes {
@@ -825,7 +825,7 @@ public class AdsHelper {
     public static final String BANNER_AD_UNIT = "BP_Banner_Android";
     public static final String INTERSTITIAL_AD_UNIT = "BP_Interstitial_Android";
     public static final String REWARDED_AD_UNIT = "BP_Rewarded_Android";
-    public static final boolean TEST_MODE = true; // Real ads ke liye false karein
+    public static final boolean TEST_MODE = false;
 
     private static boolean initialized = false;
     private static boolean interstitialLoaded = false;
@@ -1715,4 +1715,4 @@ public class SavedBillsActivity extends AppCompatActivity {
 }
 EOF
 
-echo "Sales Bill App with Unity Ads Ready!"
+echo "Sales Bill App with Live Unity Ads Ready!"
