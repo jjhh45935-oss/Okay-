@@ -52,7 +52,7 @@ android {
         minSdk 24
         targetSdk 35
         versionCode 1
-        versionName "1.2"
+        versionName "1.3"
     }
 
     buildTypes {
@@ -184,6 +184,7 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
     android:background="@color/bg_light"
     android:orientation="vertical">
 
+    <!-- Top Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -225,6 +226,19 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
             android:textColor="@color/white"
             app:strokeColor="@color/white" />
     </LinearLayout>
+
+    <!-- Upper Header Chhoti Banner Ad Patti -->
+    <FrameLayout
+        android:id="@+id/bannerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:paddingVertical="2dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -541,12 +555,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_main.xml
         </LinearLayout>
     </ScrollView>
 
-    <FrameLayout
-        android:id="@+id/bannerContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white" />
-
 </LinearLayout>
 EOF
 
@@ -693,6 +701,14 @@ cat << 'EOF' > app/src/main/res/layout/activity_saved_bills.xml
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Upper Header Chhoti Banner Ad Patti -->
+    <FrameLayout
+        android:id="@+id/bannerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:paddingVertical="2dp" />
+
     <TextView
         android:id="@+id/tvEmpty"
         android:layout_width="match_parent"
@@ -710,12 +726,6 @@ cat << 'EOF' > app/src/main/res/layout/activity_saved_bills.xml
         android:layout_height="0dp"
         android:layout_weight="1"
         android:padding="12dp" />
-
-    <FrameLayout
-        android:id="@+id/bannerContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white" />
 
 </LinearLayout>
 EOF
@@ -811,10 +821,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import com.unity3d.ads.IUnityAdsInitializationListener;
-import com.unity3d.ads.IUnityAdsLoadListener;
-import com.unity3d.ads.IUnityAdsShowListener;
 import com.unity3d.ads.UnityAds;
-import com.unity3d.ads.UnityAdsShowOptions;
 import com.unity3d.services.banners.BannerErrorInfo;
 import com.unity3d.services.banners.BannerView;
 import com.unity3d.services.banners.UnityBannerSize;
@@ -823,82 +830,16 @@ public class AdsHelper {
 
     public static final String UNITY_GAME_ID = "800447446";
     public static final String BANNER_AD_UNIT = "BP_Banner_Android";
-    public static final String INTERSTITIAL_AD_UNIT = "BP_Interstitial_Android";
-    public static final String REWARDED_AD_UNIT = "BP_Rewarded_Android";
     public static final boolean TEST_MODE = false;
 
-    private static boolean initialized = false;
-    private static boolean interstitialLoaded = false;
-
     public static void init(Activity activity) {
-        if (UnityAds.isInitialized()) {
-            initialized = true;
-            loadInterstitial();
-            return;
-        }
+        if (UnityAds.isInitialized()) return;
         UnityAds.initialize(activity.getApplicationContext(), UNITY_GAME_ID, TEST_MODE, new IUnityAdsInitializationListener() {
             @Override
-            public void onInitializationComplete() {
-                initialized = true;
-                loadInterstitial();
-            }
+            public void onInitializationComplete() {}
 
             @Override
-            public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
-                initialized = false;
-            }
-        });
-    }
-
-    public static void loadInterstitial() {
-        if (!initialized && !UnityAds.isInitialized()) return;
-        UnityAds.load(INTERSTITIAL_AD_UNIT, new IUnityAdsLoadListener() {
-            @Override
-            public void onUnityAdsAdLoaded(String placementId) {
-                interstitialLoaded = true;
-            }
-
-            @Override
-            public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
-                interstitialLoaded = false;
-            }
-        });
-    }
-
-    public static void showInterstitialThen(Activity activity, Runnable afterAd) {
-        if (!interstitialLoaded || !UnityAds.isInitialized()) {
-            loadInterstitial();
-            if (afterAd != null) afterAd.run();
-            return;
-        }
-
-        interstitialLoaded = false;
-        UnityAds.show(activity, INTERSTITIAL_AD_UNIT, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
-            @Override
-            public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
-                loadInterstitial();
-                activity.runOnUiThread(() -> {
-                    if (afterAd != null && !activity.isFinishing() && !activity.isDestroyed()) {
-                        afterAd.run();
-                    }
-                });
-            }
-
-            @Override
-            public void onUnityAdsShowStart(String placementId) {}
-
-            @Override
-            public void onUnityAdsShowClick(String placementId) {}
-
-            @Override
-            public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
-                loadInterstitial();
-                activity.runOnUiThread(() -> {
-                    if (afterAd != null && !activity.isFinishing() && !activity.isDestroyed()) {
-                        afterAd.run();
-                    }
-                });
-            }
+            public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {}
         });
     }
 
@@ -1544,7 +1485,7 @@ public class MainActivity extends AppCompatActivity {
         tvBillMeta.setText("Bill No: " + currentBillNo + " | Date: " + currentDate);
 
         if (generatePdf) {
-            AdsHelper.showInterstitialThen(this, () -> PdfHelper.createAndShowPdf(MainActivity.this, bill));
+            PdfHelper.createAndShowPdf(MainActivity.this, bill);
         }
     }
 
@@ -1685,8 +1626,7 @@ public class SavedBillsActivity extends AppCompatActivity {
         adapter = new SavedBillAdapter(bills, new SavedBillAdapter.Listener() {
             @Override
             public void onPdf(BillModel bill) {
-                AdsHelper.showInterstitialThen(SavedBillsActivity.this,
-                        () -> PdfHelper.createAndShowPdf(SavedBillsActivity.this, bill));
+                PdfHelper.createAndShowPdf(SavedBillsActivity.this, bill);
             }
 
             @Override
@@ -1715,4 +1655,4 @@ public class SavedBillsActivity extends AppCompatActivity {
 }
 EOF
 
-echo "Sales Bill App with Live Unity Ads Ready!"
+echo "Top Header Banner Ad Ready!"
